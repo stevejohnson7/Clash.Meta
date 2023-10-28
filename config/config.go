@@ -473,6 +473,10 @@ func UnmarshalRawConfig(buf []byte) (*RawConfig, error) {
 			GeoSite: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",
 		},
 		ExternalUIURL: "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+		ClashForAndroid: RawClashForAndroid{
+			AppendSystemDNS:   true,
+			UiSubtitlePattern: "",
+		},
 	}
 
 	if err := yaml.Unmarshal(buf, rawCfg); err != nil {

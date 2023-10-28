@@ -58,7 +58,6 @@ type General struct {
 	TCPConcurrent           bool              `json:"tcp-concurrent"`
 	FindProcessMode         P.FindProcessMode `json:"find-process-mode"`
 	Sniffing                bool              `json:"sniffing"`
-	EBpf                    EBpf              `json:"-"`
 	GlobalClientFingerprint string            `json:"global-client-fingerprint"`
 	GlobalUA                string            `json:"global-ua"`
 }
@@ -211,11 +210,16 @@ type RawDNS struct {
 }
 
 type RawFallbackFilter struct {
-	GeoIP     bool     `yaml:"geoip"`
-	GeoIPCode string   `yaml:"geoip-code"`
-	IPCIDR    []string `yaml:"ipcidr"`
-	Domain    []string `yaml:"domain"`
-	GeoSite   []string `yaml:"geosite"`
+	GeoIP     bool     `yaml:"geoip" json:"geoip"`
+	GeoIPCode string   `yaml:"geoip-code" json:"geoip-code"`
+	IPCIDR    []string `yaml:"ipcidr" json:"ipcidr"`
+	Domain    []string `yaml:"domain" json:"domain"`
+	GeoSite   []string `yaml:"geosite" json:"geosite"`
+}
+
+type RawClashForAndroid struct {
+	AppendSystemDNS   bool   `yaml:"append-system-dns" json:"append-system-dns"`
+	UiSubtitlePattern string `yaml:"ui-subtitle-pattern" json:"ui-subtitle-pattern"`
 }
 
 type RawTun struct {
@@ -314,6 +318,8 @@ type RawConfig struct {
 	SubRules      map[string][]string       `yaml:"sub-rules"`
 	RawTLS        TLS                       `yaml:"tls"`
 	Listeners     []map[string]any          `yaml:"listeners"`
+
+	ClashForAndroid RawClashForAndroid      `yaml:"clash-for-android"`
 }
 
 type GeoXUrl struct {
@@ -466,6 +472,10 @@ func UnmarshalRawConfig(buf []byte) (*RawConfig, error) {
 			GeoSite: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",
 		},
 		ExternalUIURL: "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+		ClashForAndroid: RawClashForAndroid{
+			AppendSystemDNS:   true,
+			UiSubtitlePattern: "",
+		},
 	}
 
 	if err := yaml.Unmarshal(buf, rawCfg); err != nil {
@@ -481,7 +491,6 @@ func ParseRawConfig(rawCfg *RawConfig) (*Config, error) {
 	startTime := time.Now()
 	config.Experimental = &rawCfg.Experimental
 	config.Profile = &rawCfg.Profile
-	config.IPTables = &rawCfg.IPTables
 	config.TLS = &rawCfg.RawTLS
 
 	general, err := parseGeneral(rawCfg)
@@ -541,11 +550,6 @@ func ParseRawConfig(rawCfg *RawConfig) (*Config, error) {
 		return nil, err
 	}
 	config.DNS = dnsCfg
-
-	err = parseTun(rawCfg.Tun, config.General)
-	if err != nil {
-		return nil, err
-	}
 
 	err = parseTuicServer(rawCfg.TuicServer, config.General)
 	if err != nil {
@@ -643,7 +647,6 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 		GeodataLoader:           cfg.GeodataLoader,
 		TCPConcurrent:           cfg.TCPConcurrent,
 		FindProcessMode:         cfg.FindProcessMode,
-		EBpf:                    cfg.EBpf,
 		GlobalClientFingerprint: cfg.GlobalClientFingerprint,
 		GlobalUA:                cfg.GlobalUA,
 	}, nil
